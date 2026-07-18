@@ -29,11 +29,22 @@ def configure_app():
     st.set_page_config(page_title=Config.PAGE_TITLE, page_icon=Config.PAGE_ICON, layout=Config.LAYOUT)
 
 
+def fetch_backend_health(url: str) -> Dict:
+    try:
+        resp = requests.get(f"{url}/health", timeout=3)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
 class SessionManager:
     @staticmethod
     def initialize():
         if "mensajes" not in st.session_state:
             st.session_state.mensajes = []
+        if "backend_health" not in st.session_state:
+            st.session_state.backend_health = fetch_backend_health(Config.BACKEND_URL)
 
     @staticmethod
     def add_message(message: Message):
@@ -57,17 +68,6 @@ def call_backend(question: str) -> Dict:
         return {"respuesta": "Error comunicándose con el backend.", "fuentes": [str(e)]}
 
 
-def get_backend_health(url: str) -> Dict:
-    if "backend_health" not in st.session_state:
-        try:
-            resp = requests.get(f"{url}/health", timeout=3)
-            resp.raise_for_status()
-            st.session_state.backend_health = resp.json()
-        except Exception as e:
-            st.session_state.backend_health = {"status": "error", "error": str(e)}
-    return st.session_state.backend_health
-
-
 class ChatUI:
     def __init__(self):
         self.quick_questions = [
@@ -84,7 +84,7 @@ class ChatUI:
         st.title(f"{Config.PAGE_ICON} {Config.PAGE_TITLE}")
         st.caption(Config.WELCOME_MESSAGE)
         with st.expander("ℹ️ Estado del sistema"):
-            health = get_backend_health(Config.BACKEND_URL)
+            health = st.session_state.backend_health
             if health.get("status") == "ok":
                 st.success("✅ Backend disponible")
             elif health.get("status") == "error":
