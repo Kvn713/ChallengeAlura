@@ -30,6 +30,13 @@ def configure_app():
     st.set_page_config(page_title=Config.PAGE_TITLE, page_icon=Config.PAGE_ICON, layout=Config.LAYOUT)
 
 
+def _is_local_host_url(url: str) -> bool:
+    if not url:
+        return False
+    low = url.lower()
+    return "localhost" in low or "127.0.0.1" in low or "::1" in low
+
+
 def fetch_backend_health(url: str) -> Dict:
     try:
         resp = requests.get(f"{url}/health", timeout=3)
@@ -80,24 +87,40 @@ class SessionManager:
                     st.session_state.backend_health = {"status": "error", "error": str(e)}
                     st.session_state.use_local_fallback = True
             else:
-                # Intentar conectar al backend remoto; si falla, intentar fallback local
-                health = fetch_backend_health(Config.BACKEND_URL)
-                st.session_state.backend_health = health
-                if health.get("status") == "error":
+                # Si BACKEND_URL apunta a localhost, omitimos la comprobación remota para evitar errores ruidosos
+                if _is_local_host_url(Config.BACKEND_URL):
+                    st.session_state.backend_health = {"status": "skipped_local", "backend": "localhost"}
+                    # Intentamos inicializar el servicio local como fallback silencioso
                     try:
-                        with st.spinner("Backend no disponible — intentando inicializar RAG local..."):
-                            svc = get_local_chat_service()
-                            if svc is None:
-                                st.session_state.backend_health = {"status": "error", "error": st.session_state.get("local_init_error", "Error desconocido")}
-                                st.session_state.use_local_fallback = False
-                            else:
-                                st.session_state.backend_health = {"status": "ok", "backend": "local_fallback"}
-                                st.session_state.use_local_fallback = True
+                        svc = get_local_chat_service()
+                        if svc is None:
+                            st.session_state.backend_health = {"status": "error", "error": st.session_state.get("local_init_error", "Error desconocido")}
+                            st.session_state.use_local_fallback = False
+                        else:
+                            st.session_state.backend_health = {"status": "ok", "backend": "local_fallback"}
+                            st.session_state.use_local_fallback = True
                     except Exception as e:
                         st.session_state.backend_health = {"status": "error", "error": str(e)}
                         st.session_state.use_local_fallback = False
                 else:
-                    st.session_state.use_local_fallback = False
+                    # Intentar conectar al backend remoto; si falla, intentar fallback local
+                    health = fetch_backend_health(Config.BACKEND_URL)
+                    st.session_state.backend_health = health
+                    if health.get("status") == "error":
+                        try:
+                            with st.spinner("Backend no disponible — intentando inicializar RAG local..."):
+                                svc = get_local_chat_service()
+                                if svc is None:
+                                    st.session_state.backend_health = {"status": "error", "error": st.session_state.get("local_init_error", "Error desconocido")}
+                                    st.session_state.use_local_fallback = False
+                                else:
+                                    st.session_state.backend_health = {"status": "ok", "backend": "local_fallback"}
+                                    st.session_state.use_local_fallback = True
+                        except Exception as e:
+                            st.session_state.backend_health = {"status": "error", "error": str(e)}
+                            st.session_state.use_local_fallback = False
+                    else:
+                        st.session_state.use_local_fallback = False
 
     @staticmethod
     def add_message(message: Message):
@@ -173,7 +196,12 @@ class ChatUI:
                 else:
                     st.success("✅ Backend disponible")
             elif health.get("status") == "error":
-                st.warning(f"⚠️ No se pudo conectar con el backend: {health.get('error')}")
+                # Mostrar mensaje conciso sin el stack/trace de errores de conexión
+                err = health.get('error', '')
+                if err and ("localhost" in err or "127.0.0.1" in err):
+                    st.warning("⚠️ No se pudo conectar con el backend remoto (host local). Se omitió la comprobación para localhost.")
+                else:
+                    st.warning(f"⚠️ No se pudo conectar con el backend: {err}")
             elif health.get("status") == "local_not_initialized":
                 st.info("ℹ️ Servicio local no inicializado. Pulsa 'Inicializar servicio local' para cargar los documentos.")
             else:
