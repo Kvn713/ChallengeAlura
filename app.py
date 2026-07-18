@@ -217,7 +217,7 @@ class ChatUI:
                     color: #e8eef8;
                 }
                 .stButton>button {
-                    background-color: #1a4f8b;
+                    background-color: #6b7280; /* gris */
                     color: #ffffff;
                     border-radius: 12px;
                     border: none;
@@ -225,10 +225,10 @@ class ChatUI:
                     font-weight: 600;
                 }
                 .stButton>button:hover {
-                    background-color: #163f72;
+                    background-color: #4b5563; /* gris oscuro al pasar */
                 }
                 .stButton>button:focus {
-                    outline: 2px solid #6c9ce8;
+                    outline: 2px solid #9ca3af; /* contorno gris claro */
                 }
                 .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
                     color: #cfd9ff;
@@ -328,10 +328,17 @@ def main():
     SessionManager.initialize()
     ui = ChatUI()
     ui.render_header()
-    ui.render_messages()
-    ui.render_quick_questions()
-    ui.render_chat_input()
-    ui.render_clear_button()
+
+    # Layout: izquierda 1/4 (botones), derecha 3/4 (conversación)
+    left_col, right_col = st.columns([1, 3])
+
+    with left_col:
+        ui.render_quick_questions()
+        ui.render_clear_button()
+
+    with right_col:
+        ui.render_messages()
+        ui.render_chat_input()
 
 
 if __name__ == "__main__":
