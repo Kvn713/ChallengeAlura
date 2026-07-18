@@ -12,7 +12,8 @@ class Config:
     LAYOUT = "centered"
     WELCOME_MESSAGE = "¡Hola! Pregunta sobre políticas, plazos y procesos de reembolso"
     DEFAULT_SOURCE = "Atención al Cliente"
-    BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+    # Si BACKEND_URL está vacío o es 'local', el app usará el RAG en proceso (modo local)
+    BACKEND_URL = os.getenv("BACKEND_URL", "")
 
 
 class Message:
@@ -38,13 +39,46 @@ def fetch_backend_health(url: str) -> Dict:
         return {"status": "error", "error": str(e)}
 
 
+# Inicialización perezosa del servicio local (usa backend/rag_service)
+_LOCAL_MODE = not Config.BACKEND_URL or Config.BACKEND_URL.lower() == "local"
+
+
+@st.cache_resource
+def _init_local_service():
+    from backend.rag_service import RAGSystem, ChatService
+    rag = RAGSystem()
+    return ChatService(rag)
+
+
+def get_local_chat_service():
+    try:
+        return _init_local_service()
+    except Exception as e:
+        st.session_state.setdefault("local_init_error", str(e))
+        return None
+
+
 class SessionManager:
     @staticmethod
     def initialize():
         if "mensajes" not in st.session_state:
             st.session_state.mensajes = []
         if "backend_health" not in st.session_state:
-            st.session_state.backend_health = fetch_backend_health(Config.BACKEND_URL)
+            # Si estamos en modo local, no inicializamos RAG aún; marcamos estado local
+            if _LOCAL_MODE:
+                st.session_state.backend_health = {"status": "local_not_initialized"}
+                # Inicializar automáticamente el servicio local en el arranque (primera carga)
+                try:
+                    with st.spinner("Inicializando servicio local..."):
+                        svc = get_local_chat_service()
+                        if svc is None:
+                            st.session_state.backend_health = {"status": "error", "error": st.session_state.get("local_init_error", "Error desconocido")}
+                        else:
+                            st.session_state.backend_health = {"status": "ok"}
+                except Exception as e:
+                    st.session_state.backend_health = {"status": "error", "error": str(e)}
+            else:
+                st.session_state.backend_health = fetch_backend_health(Config.BACKEND_URL)
 
     @staticmethod
     def add_message(message: Message):
@@ -60,6 +94,21 @@ class SessionManager:
 
 
 def call_backend(question: str) -> Dict:
+    # Si estamos en modo local, usar servicio local
+    if _LOCAL_MODE:
+        service = get_local_chat_service()
+        if service is None:
+            # servicio no inicializado o falló
+            err = st.session_state.get("local_init_error", "Servicio local no disponible")
+            return {"respuesta": "Servicio local no disponible.", "fuentes": [err]}
+        try:
+            res = service.process_question(question)
+            if isinstance(res, dict):
+                return {"respuesta": res.get("respuesta"), "fuentes": res.get("fuentes", [])}
+            return {"respuesta": getattr(res, 'respuesta', str(res)), "fuentes": getattr(res, 'fuentes', [])}
+        except Exception as e:
+            return {"respuesta": "Error procesando localmente.", "fuentes": [str(e)]}
+
     try:
         resp = requests.post(f"{Config.BACKEND_URL}/query", json={"question": question}, timeout=30)
         resp.raise_for_status()
@@ -83,12 +132,28 @@ class ChatUI:
         self._set_styles()
         st.title(f"{Config.PAGE_ICON} {Config.PAGE_TITLE}")
         st.caption(Config.WELCOME_MESSAGE)
+        # Si estamos en modo local, permitir inicializar el servicio desde la UI
+        if _LOCAL_MODE:
+            status = st.session_state.get("backend_health", {})
+            if status.get("status") == "local_not_initialized":
+                if st.button("🔌 Inicializar servicio local"):
+                    with st.spinner("Inicializando servicio local..."):
+                        svc = get_local_chat_service()
+                        if svc is None:
+                            st.session_state.backend_health = {"status": "error", "error": st.session_state.get("local_init_error", "Error desconocido")}
+                            st.error("❌ Error inicializando servicio local")
+                        else:
+                            st.session_state.backend_health = {"status": "ok"}
+                            st.success("✅ Servicio local inicializado")
+
         with st.expander("ℹ️ Estado del sistema"):
             health = st.session_state.backend_health
             if health.get("status") == "ok":
                 st.success("✅ Backend disponible")
             elif health.get("status") == "error":
                 st.warning(f"⚠️ No se pudo conectar con el backend: {health.get('error')}")
+            elif health.get("status") == "local_not_initialized":
+                st.info("ℹ️ Servicio local no inicializado. Pulsa 'Inicializar servicio local' para cargar los documentos.")
             else:
                 st.warning("⚠️ Backend no responde correctamente")
 
