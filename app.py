@@ -151,7 +151,6 @@ class ChatUI:
         st.divider()
         if st.button("🗑️ Limpiar conversación"):
             SessionManager.clear()
-            st.experimental_rerun()
 
     def _handle_question(self, question: str):
         user_message = Message(rol="user", contenido=question)
@@ -162,7 +161,6 @@ class ChatUI:
         fuentes = result.get("fuentes", [Config.DEFAULT_SOURCE])
         assistant_message = Message(rol="assistant", contenido=respuesta, fuentes=fuentes)
         SessionManager.add_message(assistant_message)
-        st.experimental_rerun()
 
 
 def main():
