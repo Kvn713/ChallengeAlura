@@ -269,28 +269,40 @@ class ChatUI:
                     color: #e8eef8;
                     border: 1px solid #2f3d5f;
                 }
+                .dialog-window {
+                    background: rgba(18,25,36,0.6);
+                    border: 1px solid #2f3d5f;
+                    border-radius: 12px;
+                    padding: 12px;
+                    height: 60vh;
+                    overflow-y: auto;
+                }
+                .dialog-window::-webkit-scrollbar { width: 8px; }
+                .dialog-window::-webkit-scrollbar-thumb { background: #2f3d5f; border-radius: 8px; }
             </style>
             """,
             unsafe_allow_html=True,
         )
 
-    def render_messages(self):
-        for idx, msg in enumerate(SessionManager.get_messages()):
-            role = msg["rol"].lower()
+    def render_dialog_window(self):
+        msgs = SessionManager.get_messages()
+        # Construir HTML de todos los mensajes para un único contenedor scrollable
+        html = ['<div class="dialog-window">']
+        for msg in msgs:
+            role = msg.get("rol", "").lower()
             style_class = "message-user" if role == "user" else "message-assistant"
-            st.markdown(
-                f"""
-                <div class="{style_class}">
-                    <strong>{msg['rol'].title()}:</strong>
-                    <p>{msg['contenido']}</p>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            if msg.get("fuentes"):
-                with st.expander("📚 Fuentes"):
-                    for f in msg.get("fuentes", []):
-                        st.write(f"• {f}")
+            contenido = msg.get('contenido', '')
+            html.append(f"<div class=\"{style_class}\"><strong>{msg.get('rol','').title()}:</strong><p>{contenido}</p>")
+            fuentes = msg.get('fuentes', []) or []
+            if fuentes:
+                html.append('<div style="margin-top:8px;padding-left:8px;color:#cdd9ff">')
+                html.append('<strong>Fuentes:</strong><ul style="margin:6px 0 0 18px;">')
+                for f in fuentes:
+                    html.append(f"<li>{f}</li>")
+                html.append('</ul></div>')
+            html.append('</div>')
+        html.append('</div>')
+        st.markdown('\n'.join(html), unsafe_allow_html=True)
 
     def render_quick_questions(self):
         st.markdown("---")
@@ -337,8 +349,9 @@ def main():
         ui.render_clear_button()
 
     with right_col:
-        ui.render_messages()
+        # Input arriba, cuadro de diálogo (scrollable) debajo
         ui.render_chat_input()
+        ui.render_dialog_window()
 
 
 if __name__ == "__main__":
