@@ -60,15 +60,16 @@ def call_backend(question: str) -> Dict:
 class ChatUI:
     def __init__(self):
         self.quick_questions = [
-            ("⏰ Plazos", "¿Cuál es el plazo máximo para solicitar un reembolso?"),
-            ("📝 Proceso", "¿Cómo solicito un reembolso?"),
-            ("⏳ Tiempo", "¿Cuánto tiempo tarda en procesarse un reembolso?"),
+            ("📄 Docs", "¿Qué documentos necesito para el reembolso?"),
             ("✅ Elegible", "¿Qué productos son elegibles para reembolso?"),
-            ("❌ Cancelar", "¿Puedo cancelar un reembolso ya solicitado?"),
-            ("📄 Docs", "¿Qué documentos necesito para el reembolso?")
+            ("📝 Proceso", "¿Cómo solicito un reembolso?"),
+            ("⏰ Plazos", "¿Cuál es el plazo máximo para solicitar un reembolso?"),
+            ("⏳ Tiempo", "¿Cuánto tiempo tarda en procesarse un reembolso?"),
+            ("❌ Cancelar", "¿Puedo cancelar un reembolso ya solicitado?")
         ]
 
     def render_header(self):
+        self._set_styles()
         st.title(f"{Config.PAGE_ICON} {Config.PAGE_TITLE}")
         st.caption(Config.WELCOME_MESSAGE)
         with st.expander("ℹ️ Estado del sistema"):
@@ -80,6 +81,47 @@ class ChatUI:
                     st.warning("⚠️ Backend no responde correctamente")
             except Exception:
                 st.warning("⚠️ No se pudo conectar con el backend")
+
+    def _set_styles(self):
+        st.markdown(
+            """
+            <style>
+                .css-1v0mbdj e1fqkh3o2 {background: #f5f7fb;}
+                .stApp {
+                    background: linear-gradient(180deg, #eef2ff 0%, #ffffff 100%);
+                    color: #222222;
+                }
+                .stButton>button {
+                    background-color: #5b8def;
+                    color: white;
+                    border-radius: 12px;
+                    border: none;
+                    padding: 12px 16px;
+                    font-weight: 600;
+                }
+                .stButton>button:hover {
+                    background-color: #4670d8;
+                }
+                .stButton>button:focus {
+                    outline: 2px solid #d1d7ff;
+                }
+                .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+                    color: #1d2f6f;
+                }
+                .streamlit-expanderHeader {
+                    background-color: #eff4ff;
+                    border-radius: 10px;
+                }
+                .stDivider {
+                    border-top: 1px solid #dbe4ff;
+                }
+                .stChatMessage {
+                    border-radius: 18px;
+                }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
 
     def render_messages(self):
         for msg in SessionManager.get_messages():
