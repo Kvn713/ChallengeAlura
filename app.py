@@ -295,12 +295,12 @@ class ChatUI:
     def render_quick_questions(self):
         st.markdown("---")
         st.caption("⚡ Preguntas rápidas:")
-        cols = st.columns(3)
+        # Render botones en columna vertical (uno debajo del otro)
         for idx, (label, question) in enumerate(self.quick_questions):
-            col = cols[idx % 3]
-            with col:
-                if st.button(label, key=f"quick_{idx}"):
-                    self._handle_question(question)
+            if st.button(label, key=f"quick_{idx}"):
+                self._handle_question(question)
+            # pequeño separador
+            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
     def render_chat_input(self):
         question = st.chat_input("Escribe tu pregunta sobre reembolsos...")
