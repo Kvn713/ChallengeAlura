@@ -86,52 +86,63 @@ class ChatUI:
         st.markdown(
             """
             <style>
-                .css-1v0mbdj e1fqkh3o2 {background: #f5f7fb;}
+                .css-1v0mbdj e1fqkh3o2 {background: #151c2d;}
                 .stApp {
-                    background: linear-gradient(180deg, #eef2ff 0%, #ffffff 100%);
-                    color: #222222;
+                    background: linear-gradient(180deg, #0d1322 0%, #1b233a 100%);
+                    color: #e8eef8;
                 }
                 .stButton>button {
-                    background-color: #5b8def;
-                    color: white;
+                    background-color: #1a4f8b;
+                    color: #ffffff;
                     border-radius: 12px;
                     border: none;
                     padding: 12px 16px;
                     font-weight: 600;
                 }
                 .stButton>button:hover {
-                    background-color: #4670d8;
+                    background-color: #163f72;
                 }
                 .stButton>button:focus {
-                    outline: 2px solid #d1d7ff;
+                    outline: 2px solid #6c9ce8;
                 }
                 .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
-                    color: #1d2f6f;
+                    color: #cfd9ff;
                 }
                 .streamlit-expanderHeader {
-                    background-color: #eff4ff;
+                    background-color: #192841;
                     border-radius: 10px;
+                    color: #edf2ff;
+                }
+                .stExpanderHeader {
+                    color: #edf2ff;
                 }
                 .stDivider {
-                    border-top: 1px solid #dbe4ff;
+                    border-top: 1px solid #2f3b56;
                 }
                 .message-user {
-                    background: #e9f1ff;
-                    border: 1px solid #b5c9ff;
+                    background: #1e2a44;
+                    border: 1px solid #38558b;
                     border-radius: 16px;
                     padding: 14px;
                     margin-bottom: 12px;
+                    color: #e8eef8;
                 }
                 .message-assistant {
-                    background: #ffffff;
-                    border: 1px solid #d3dce6;
+                    background: #121924;
+                    border: 1px solid #2f3d5f;
                     border-radius: 16px;
                     padding: 14px;
                     margin-bottom: 12px;
+                    color: #dbe6ff;
                 }
                 .message-user p, .message-assistant p {
                     margin: 6px 0 0;
                     line-height: 1.6;
+                }
+                .stTextInput>div>div>input, .stTextArea>div>div>textarea {
+                    background: #121924;
+                    color: #e8eef8;
+                    border: 1px solid #2f3d5f;
                 }
             </style>
             """,
