@@ -57,6 +57,17 @@ def call_backend(question: str) -> Dict:
         return {"respuesta": "Error comunicándose con el backend.", "fuentes": [str(e)]}
 
 
+def get_backend_health(url: str) -> Dict:
+    if "backend_health" not in st.session_state:
+        try:
+            resp = requests.get(f"{url}/health", timeout=3)
+            resp.raise_for_status()
+            st.session_state.backend_health = resp.json()
+        except Exception as e:
+            st.session_state.backend_health = {"status": "error", "error": str(e)}
+    return st.session_state.backend_health
+
+
 class ChatUI:
     def __init__(self):
         self.quick_questions = [
@@ -73,14 +84,13 @@ class ChatUI:
         st.title(f"{Config.PAGE_ICON} {Config.PAGE_TITLE}")
         st.caption(Config.WELCOME_MESSAGE)
         with st.expander("ℹ️ Estado del sistema"):
-            try:
-                health = requests.get(f"{Config.BACKEND_URL}/health", timeout=3).json()
-                if health.get("status") == "ok":
-                    st.success("✅ Backend disponible")
-                else:
-                    st.warning("⚠️ Backend no responde correctamente")
-            except Exception:
-                st.warning("⚠️ No se pudo conectar con el backend")
+            health = get_backend_health(Config.BACKEND_URL)
+            if health.get("status") == "ok":
+                st.success("✅ Backend disponible")
+            elif health.get("status") == "error":
+                st.warning(f"⚠️ No se pudo conectar con el backend: {health.get('error')}")
+            else:
+                st.warning("⚠️ Backend no responde correctamente")
 
     def _set_styles(self):
         st.markdown(

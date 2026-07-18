@@ -1,8 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-
-from .rag_service import RAGSystem, ChatService
+from typing import Optional
 
 
 class QueryRequest(BaseModel):
@@ -19,18 +18,39 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Inicializar RAG (puede tardar unos segundos mientras descarga/crea embeddings)
-rag_system = RAGSystem()
-chat_service = ChatService(rag_system)
+rag_system = None
+chat_service = None
+rag_error: Optional[str] = None
+
+
+@app.on_event("startup")
+async def startup_event():
+    global rag_system, chat_service, rag_error
+    try:
+        from .rag_service import RAGSystem, ChatService
+        rag_system = RAGSystem()
+        chat_service = ChatService(rag_system)
+        rag_error = None
+        print("✅ RAG backend inicializado correctamente")
+    except Exception as e:
+        rag_system = None
+        chat_service = None
+        rag_error = str(e)
+        print(f"❌ Error inicializando RAG en startup: {rag_error}")
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "rag_ready": chat_service is not None,
+        "error": rag_error,
+    }
 
 
 @app.post("/query")
 def query(req: QueryRequest):
+    if chat_service is None:
+        raise HTTPException(status_code=503, detail="RAG service is not available.")
     result = chat_service.process_question(req.question)
-    # `process_question` devuelve un dict con respuesta y fuentes
     return {"respuesta": result.get("respuesta"), "fuentes": result.get("fuentes", [])}
