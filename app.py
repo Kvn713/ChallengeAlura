@@ -115,8 +115,23 @@ class ChatUI:
                 .stDivider {
                     border-top: 1px solid #dbe4ff;
                 }
-                .stChatMessage {
-                    border-radius: 18px;
+                .message-user {
+                    background: #e9f1ff;
+                    border: 1px solid #b5c9ff;
+                    border-radius: 16px;
+                    padding: 14px;
+                    margin-bottom: 12px;
+                }
+                .message-assistant {
+                    background: #ffffff;
+                    border: 1px solid #d3dce6;
+                    border-radius: 16px;
+                    padding: 14px;
+                    margin-bottom: 12px;
+                }
+                .message-user p, .message-assistant p {
+                    margin: 6px 0 0;
+                    line-height: 1.6;
                 }
             </style>
             """,
@@ -124,13 +139,22 @@ class ChatUI:
         )
 
     def render_messages(self):
-        for msg in SessionManager.get_messages():
-            with st.chat_message(msg["rol"]):
-                st.markdown(msg["contenido"])
-                if msg.get("fuentes"):
-                    with st.expander("📚 Fuentes"):
-                        for f in msg.get("fuentes", []):
-                            st.write(f"• {f}")
+        for idx, msg in enumerate(SessionManager.get_messages()):
+            role = msg["rol"].lower()
+            style_class = "message-user" if role == "user" else "message-assistant"
+            st.markdown(
+                f"""
+                <div class="{style_class}">
+                    <strong>{msg['rol'].title()}:</strong>
+                    <p>{msg['contenido']}</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            if msg.get("fuentes"):
+                with st.expander("📚 Fuentes"):
+                    for f in msg.get("fuentes", []):
+                        st.write(f"• {f}")
 
     def render_quick_questions(self):
         st.markdown("---")
